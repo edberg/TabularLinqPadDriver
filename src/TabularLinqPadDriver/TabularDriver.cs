@@ -2,6 +2,7 @@
 using System.Reflection;
 using LINQPad.Extensibility.DataContext;
 using LinqToDAX;
+using TabularLinqPadDriver.Windows;
 
 namespace TabularLinqPadDriver
 {
@@ -19,12 +20,9 @@ namespace TabularLinqPadDriver
 
         public override bool ShowConnectionDialog(IConnectionInfo cxInfo, bool isNewConnection)
         {
-            var database = "AW Tabular Model SQL 2014";
-            var server = "DESKTOP-0OF9FA6";
-
-            if (isNewConnection) new TabularProperties(cxInfo) { Server = server, Database = database };
-
-            return true;
+            if (isNewConnection) new TabularProperties(cxInfo);
+            bool? result = new ConnectionDialog(cxInfo).ShowDialog();
+            return result == true;
         }
 
         public override List<ExplorerItem> GetSchemaAndBuildAssembly(IConnectionInfo cxInfo, AssemblyName assemblyToBuild, ref string nameSpace, ref string typeName)

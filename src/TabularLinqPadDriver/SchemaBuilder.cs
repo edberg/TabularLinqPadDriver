@@ -26,13 +26,21 @@ namespace TabularLinqPadDriver
     {
         internal static List<ExplorerItem> GetSchemaAndBuildAssembly(TabularProperties props, AssemblyName name, ref string nameSpace, ref string typeName)
         {
-            var tables = GenerateModel(props.GetConnection(), props.Database);
-            var cu = GenerateCompilationSyntax(tables, nameSpace, out typeName);
-            var code = GenerateCode(cu);
-            
-            var assembly = GenerateAssembly(code, name);
-            var schema = GenerateSchema(tables);
-            return schema;
+            try
+            {
+                var tables = GenerateModel(props.GetConnection(), props.Database);
+                var cu = GenerateCompilationSyntax(tables, nameSpace, out typeName);
+                var code = GenerateCode(cu);
+
+                var assembly = GenerateAssembly(code, name);
+                var schema = GenerateSchema(tables);
+                return schema;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+
         }
 
         private static CompilationUnitSyntax GenerateCompilationSyntax(List<TableModel> tables, string nameSpace, out string typeName)
@@ -183,7 +191,7 @@ namespace TabularLinqPadDriver
                                          }
                                        ).ToList(),
                               References = (from r in db.Model.Relationships.Cast<Relationship>()
-                                            where r.Name == t.Name
+                                            where r.FromTable?.Name == t.Name
                                             select r.ToTable?.Name).ToList(),
                               Measures = (from m in t.Measures.Cast<Measure>()
                                           select new MeasureModel
@@ -253,12 +261,14 @@ namespace TabularLinqPadDriver
             var result = new List<ExplorerItem>();
             var measures = from t in tables
                            where t.Measures.Count() > 0
-                           select new ExplorerItem(t.Identifier, ExplorerItemKind.Category, ExplorerIcon.TableFunction)
+                           select new ExplorerItem(t.Identifier, ExplorerItemKind.Category, ExplorerIcon.Box)
                            {
+                               DragText = t.Identifier,
                                ToolTipText = t.Name,
                                Children = (from m in t.Measures
                                            select new ExplorerItem(m.Identifier, ExplorerItemKind.QueryableObject, ExplorerIcon.TableFunction)
                                            {
+                                               DragText = m.Identifier,
                                                ToolTipText = m.Name
                                            }).ToList(),
                            };
@@ -267,15 +277,44 @@ namespace TabularLinqPadDriver
             var schema = (from t in tables
                           select new ExplorerItem(t.Identifier, ExplorerItemKind.QueryableObject, ExplorerIcon.Table)
                           {
+                              DragText = t.Identifier,
                               ToolTipText = t.Name,
                               Children = (from c in t.Columns
                                           select new ExplorerItem(c.Identifier, ExplorerItemKind.Property, c.IsKey ? ExplorerIcon.Key : ExplorerIcon.Column)
                                           {
-                                              
+                                              DragText = c.Identifier,
                                               ToolTipText = c.Name
                                           }).ToList(),
+                              Tag = t.References,
                          }).ToList();
+
+            schema.ForEach(table => 
+            {
+                var references = (table.Tag as List<string>) ?? new List<string>();
+                var referred = from i in schema
+                               where references.Contains(i.Text)
+                               select new ExplorerItem(i.Text, ExplorerItemKind.ReferenceLink, ExplorerIcon.ManyToOne)
+                               {
+                                   DragText = i.DragText,
+                                   ToolTipText = i.ToolTipText,
+                                   HyperlinkTarget = i,
+                               };
+                table.Children.AddRange(referred);
+
+                var referredby = from i in schema
+                                 let refers = (i.Tag as List<string>) ?? new List<string>()
+                                 where refers.Contains(table.Text)
+                                 select new ExplorerItem(i.Text, ExplorerItemKind.ReferenceLink, ExplorerIcon.OneToMany)
+                                 {
+                                     DragText = i.DragText,
+                                     ToolTipText = i.ToolTipText,
+                                     HyperlinkTarget = i,
+                                 };
+                table.Children.AddRange(referredby);
+            });
+
             result.AddRange(schema);
+
             return result;
         }
     }
@@ -284,7 +323,7 @@ namespace TabularLinqPadDriver
     {
         public static string ToIdentifier(this string columnName)
         {
-            var x = columnName.Replace(".", "");
+            var x = columnName.Replace(".", "").Replace("(", "-").Replace(")","");
             var c = x.TrimStart('[').TrimEnd(']').Replace(" ", "_").Replace("-", "_").Replace("__", "_");
             if (c.Contains("_"))
             {

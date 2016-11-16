@@ -51,20 +51,16 @@ namespace TabularLinqPadDriver
             set { _driverData.SetElementValue("Password", _cxInfo.Encrypt(value)); }
         }
 
-        public ICredentials GetCredentials()
-        {
-            if (!string.IsNullOrEmpty(Domain))
-                return new NetworkCredential(UserName, Password, Domain);
-
-            if (!string.IsNullOrEmpty(UserName))
-                return new NetworkCredential(UserName, Password);
-
-            return CredentialCache.DefaultNetworkCredentials;
-        }
-
         public string GetConnection()
         {
-            return $"Data Source={Server};Initial Catalog={Database};Provider=MSOLAP;";
+            var baseconn = $"Data Source={Server};Initial Catalog={Database};Provider=MSOLAP;";
+
+            if (!string.IsNullOrEmpty(Domain))
+                return $"{baseconn}User ID={Domain}\\{UserName};Password={Password}";
+            if (!string.IsNullOrEmpty(UserName))
+                return $"{baseconn}User ID={UserName};Password={Password}";
+
+            return baseconn;
         }
     }
 }
