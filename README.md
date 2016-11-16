@@ -1,4 +1,4 @@
-# Tabular LINQPad Driver
+ # Tabular LINQPad Driver
 
 [![Build status](https://ci.appveyor.com/api/projects/status/xvai2lkmhgdn973h?svg=true)](https://ci.appveyor.com/project/edberg/tabularlinqpaddriver)
 
@@ -8,7 +8,7 @@ This is a linqpad driver for connecting to SSAS tabular instances.
 
 To install:
 
-1) Download the driver from the [latest release](https://github.com/edberg/TabularLinqPadDriver/releases/latest)
+1) Download the driver (TabularLinqPadDriver.lpx) from the [latest release](https://github.com/edberg/TabularLinqPadDriver/releases/latest)
 
 2) In Linqpad, click "Add connection".
 
